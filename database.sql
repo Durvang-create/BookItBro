@@ -1,4 +1,7 @@
-CREATE DATABASE IF NOT EXISTS bookmyshowdurvang CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS bookmyshowdurvang
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
 USE bookmyshowdurvang;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -32,19 +35,47 @@ CREATE TABLE IF NOT EXISTS bookings (
   total DECIMAL(10,2) NOT NULL,
   status VARCHAR(30) NOT NULL DEFAULT 'Confirmed',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+
+  CONSTRAINT fk_bookings_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_bookings_movie
+    FOREIGN KEY (movie_id) REFERENCES movies(id)
+    ON DELETE CASCADE
 );
 
-INSERT INTO users (name,email,password,role)
-VALUES ('Administrator','admin@bookmyshowdurvang.com','$2y$12$U6/DUx7r5B3x3b3sReaXtuTWIbjDfjlebxF3CmoMvicYP4TM02PdG','admin')
-ON DUPLICATE KEY UPDATE email=email;
+-- Admin password is stored as a bcrypt hash.
+-- Keep this row if you already have the admin account.
+INSERT INTO users (name, email, password, role)
+VALUES (
+  'Administrator',
+  'admin@bookmyshowdurvang.com',
+  '$2y$12$U6/DUx7r5B3x3b3sReaXtuTWIbjDfjlebxF3CmoMvicYP4TM02PdG',
+  'admin'
+)
+ON DUPLICATE KEY UPDATE email = email;
 
 INSERT INTO movies (title,genre,language,duration,price,poster,rating)
-SELECT 'Interstellar','Sci-Fi','English',169,250,'',8.7 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title='Interstellar');
+SELECT 'Interstellar','Sci-Fi','English',169,250,'',8.7
+WHERE NOT EXISTS (
+  SELECT 1 FROM movies WHERE title='Interstellar'
+);
+
 INSERT INTO movies (title,genre,language,duration,price,poster,rating)
-SELECT 'Inception','Thriller','English',148,250,'',8.8 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title='Inception');
+SELECT 'Inception','Thriller','English',148,250,'',8.8
+WHERE NOT EXISTS (
+  SELECT 1 FROM movies WHERE title='Inception'
+);
+
 INSERT INTO movies (title,genre,language,duration,price,poster,rating)
-SELECT 'Avengers: Endgame','Action','English',181,250,'',8.4 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title='Avengers: Endgame');
+SELECT 'Avengers: Endgame','Action','English',181,250,'',8.4
+WHERE NOT EXISTS (
+  SELECT 1 FROM movies WHERE title='Avengers: Endgame'
+);
+
 INSERT INTO movies (title,genre,language,duration,price,poster,rating)
-SELECT 'Dune: Part Two','Sci-Fi','English',166,250,'',8.5 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title='Dune: Part Two');
+SELECT 'Dune: Part Two','Sci-Fi','English',166,250,'',8.5
+WHERE NOT EXISTS (
+  SELECT 1 FROM movies WHERE title='Dune: Part Two'
+);

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book it Bro - Movie Booking System</title>
+    <title>BookMyShowDurvang - Movie Booking System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -967,7 +967,7 @@
     <header class="navbar">
         <a href="#home" class="logo">
             <span class="logo-mark">🎬</span>
-            Book it <span>Bro</span>
+            BookMyShow<span>Durvang</span>
         </a>
         <nav class="nav-links">
             <a href="#home">Home</a>
@@ -1060,7 +1060,7 @@
                 </div>
             </div>
             <div class="form-box">
-                <h2>Login to Book it Bro</h2>
+                <h2>Login to BookMyShowDurvang</h2>
                 <form id="loginForm">
                     <div class="form-group">
                         <label>Email</label>
@@ -1249,7 +1249,7 @@
     </section>
 
     <footer>
-        <p>© 2026 <span>Book it Bro</span> | Web Technology Project</p>
+        <p>© 2026 <span>BookMyShowDurvang</span> | Web Technology Project</p>
     </footer>
 
     <script>
@@ -1260,44 +1260,93 @@
         const API = 'api.php';
 
         const $ = id => document.getElementById(id);
-        const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+        const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+        }[c]));
 
-        async function api(action, method='GET', data=null) {
-            const options = {method, credentials:'same-origin', headers:{}};
-            if (data) { options.headers['Content-Type']='application/json'; options.body=JSON.stringify(data); }
-            const res = await fetch(`${API}?action=${action}`, options);
-            return await res.json();
+        async function api(action, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                };
+
+                if (data !== null) {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(data);
+                }
+
+                const res = await fetch(`${API}?action=${encodeURIComponent(action)}`, options);
+                const text = await res.text();
+
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch {
+                    return {
+                        success: false,
+                        message: `Server returned an invalid response (HTTP ${res.status}).`
+                    };
+                }
+
+                return result;
+            } catch (error) {
+                console.error(error);
+                return {
+                    success: false,
+                    message: 'Unable to connect to the server. Make sure XAMPP Apache and MySQL are running and open the project through localhost.'
+                };
+            }
         }
 
         async function loadMovies() {
             const r = await api('movies');
-            if (!r.success) { alert(r.message); return; }
+            if (!r.success) {
+                alert(r.message || 'Unable to load movies.');
+                return;
+            }
+
             movies = r.data || [];
             renderMovies();
             renderAdminMovies();
-            populateMovieSelect();
         }
 
         function renderMovies() {
             const grid = $('movieGrid');
             grid.innerHTML = '';
+
             if (!movies.length) {
                 grid.innerHTML = '<p style="color:#b8b8c7">No movies are currently available.</p>';
                 return;
             }
+
             movies.forEach((m, i) => {
                 const posterClass = 'poster' + ((i % 4) + 1);
-                const duration = `${Math.floor(m.duration/60)}h ${m.duration%60}m`;
-                const poster = m.poster ? `background-image:linear-gradient(180deg,transparent,rgba(0,0,0,.25)),url('${esc(m.poster)}');background-size:cover;background-position:center;` : '';
-                grid.innerHTML += `<div class="movie-card" data-title="${esc(m.title.toLowerCase())}">
-                    <div class="poster ${posterClass}" style="${poster}"><span class="rating-chip">⭐ ${Number(m.rating||0).toFixed(1)}</span><span>${esc(m.title.toUpperCase())}</span></div>
-                    <div class="movie-info"><h3>${esc(m.title)}</h3><p>${esc(m.genre)} • ${duration} • ${esc(m.language)}</p><button class="btn full-btn" onclick="selectMovie(${m.id})">Book Tickets</button></div>
-                </div>`;
+                const duration = `${Math.floor(Number(m.duration) / 60)}h ${Number(m.duration) % 60}m`;
+                const poster = m.poster
+                    ? `background-image:linear-gradient(180deg,transparent,rgba(0,0,0,.25)),url('${esc(m.poster)}');background-size:cover;background-position:center;`
+                    : '';
+
+                grid.innerHTML += `
+                    <div class="movie-card" data-title="${esc(String(m.title).toLowerCase())}">
+                        <div class="poster ${posterClass}" style="${poster}">
+                            <span class="rating-chip">⭐ ${Number(m.rating || 0).toFixed(1)}</span>
+                            <span>${esc(String(m.title).toUpperCase())}</span>
+                        </div>
+                        <div class="movie-info">
+                            <h3>${esc(m.title)}</h3>
+                            <p>${esc(m.genre)} • ${duration} • ${esc(m.language)}</p>
+                            <button class="btn full-btn" onclick="selectMovie(${Number(m.id)})">Book Tickets</button>
+                        </div>
+                    </div>`;
             });
         }
 
         $('movieSearch').addEventListener('input', function () {
-            const q = this.value.toLowerCase();
+            const q = this.value.toLowerCase().trim();
             document.querySelectorAll('.movie-card').forEach(card => {
                 card.style.display = card.dataset.title.includes(q) ? 'block' : 'none';
             });
@@ -1306,31 +1355,51 @@
         function selectMovie(id) {
             selectedMovie = movies.find(m => Number(m.id) === Number(id));
             if (!selectedMovie) return;
+
             $('bookingTitle').innerText = 'Book Tickets - ' + selectedMovie.title;
             $('summaryMovie').innerText = selectedMovie.title;
             $('pricePerSeat').innerText = '₹' + Number(selectedMovie.price).toFixed(2);
+
             selectedSeats = [];
-            document.querySelectorAll('.seat').forEach(s => s.classList.remove('selected'));
+            buildSeats();
             updateBookingSummary();
-            $('booking').scrollIntoView({behavior:'smooth'});
+            $('booking').scrollIntoView({ behavior: 'smooth' });
         }
 
         function buildSeats() {
             const seatGrid = $('seatGrid');
             seatGrid.innerHTML = '';
+
+            // Demo occupied seats. In a production system this would come from the database.
             const occupiedSeats = ['A3','B5','C2','D7','E4'];
             const rows = ['A','B','C','D','E'];
+
             rows.forEach(row => {
-                for (let i=1; i<=8; i++) {
-                    const seatNumber = row+i;
+                for (let i = 1; i <= 8; i++) {
+                    const seatNumber = row + i;
                     const seat = document.createElement('button');
-                    seat.className='seat'; seat.innerText=i; seat.type='button'; seat.dataset.seat=seatNumber;
-                    if (occupiedSeats.includes(seatNumber)) { seat.classList.add('occupied'); seat.disabled=true; }
+
+                    seat.className = 'seat';
+                    seat.innerText = i;
+                    seat.type = 'button';
+                    seat.dataset.seat = seatNumber;
+
+                    if (occupiedSeats.includes(seatNumber)) {
+                        seat.classList.add('occupied');
+                        seat.disabled = true;
+                    }
+
                     seat.addEventListener('click', () => {
-                        if (selectedSeats.includes(seatNumber)) { selectedSeats=selectedSeats.filter(s=>s!==seatNumber); seat.classList.remove('selected'); }
-                        else { selectedSeats.push(seatNumber); seat.classList.add('selected'); }
+                        if (selectedSeats.includes(seatNumber)) {
+                            selectedSeats = selectedSeats.filter(s => s !== seatNumber);
+                            seat.classList.remove('selected');
+                        } else {
+                            selectedSeats.push(seatNumber);
+                            seat.classList.add('selected');
+                        }
                         updateBookingSummary();
                     });
+
                     seatGrid.appendChild(seat);
                 }
             });
@@ -1339,7 +1408,8 @@
         function updateBookingSummary() {
             $('selectedSeats').innerText = selectedSeats.length ? selectedSeats.join(', ') : 'None';
             $('summarySeats').innerText = selectedSeats.length;
-            $('totalPrice').innerText = '₹' + (selectedSeats.length * Number(selectedMovie?.price || 0)).toFixed(2);
+            $('totalPrice').innerText =
+                '₹' + (selectedSeats.length * Number(selectedMovie?.price || 0)).toFixed(2);
         }
 
         async function checkSession() {
@@ -1350,148 +1420,488 @@
 
         function updateUI() {
             const admin = currentUser && currentUser.role === 'admin';
+
             $('adminNav').style.display = admin ? 'inline-block' : 'none';
             $('adminPanel').style.display = admin ? 'block' : 'none';
             $('accountName').innerText = currentUser ? currentUser.name : 'Guest';
+
             $('loginNav').style.display = currentUser ? 'none' : 'inline-block';
             $('logoutNav').style.display = currentUser ? 'inline-block' : 'none';
-            if (currentUser) loadBookings();
-            else $('myBookingsTable').innerHTML='<tr><td colspan="5" style="text-align:center;color:#b8b8c7">Login to view your bookings.</td></tr>';
-            if (admin) loadAdminBookings();
+
+            if (currentUser) {
+                loadBookings();
+            } else {
+                $('totalBookings').innerText = '0';
+                $('upcomingBookings').innerText = '0';
+                $('myBookingsTable').innerHTML =
+                    '<tr><td colspan="5" style="text-align:center;color:#b8b8c7">Login to view your bookings.</td></tr>';
+                $('adminBookingTable').innerHTML =
+                    '<tr><td colspan="8" style="text-align:center;color:#b8b8c7">Admin login required.</td></tr>';
+            }
+
+            if (admin) {
+                loadAdminBookings();
+                renderAdminMovies();
+            }
         }
 
-        $('registerForm').addEventListener('submit', async function(event) {
+        $('registerForm').addEventListener('submit', async function (event) {
             event.preventDefault();
-            const name=$('name').value.trim(), email=$('email').value.trim(), password=$('password').value, confirm=$('confirmPassword').value;
-            ['nameError','emailError','passwordError','confirmError'].forEach(id=>$(id).innerText='');
-            let valid=true;
-            if(name.length<2){$('nameError').innerText='Please enter your full name.';valid=false;}
-            if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){$('emailError').innerText='Please enter a valid email.';valid=false;}
-            if(password.length<6){$('passwordError').innerText='Password must contain at least 6 characters.';valid=false;}
-            if(password!==confirm){$('confirmError').innerText='Passwords do not match.';valid=false;}
-            if(!valid)return;
-            const r=await api('register','POST',{name,email,password});
-            alert(r.message);
-            if(r.success) this.reset();
+
+            const name = $('name').value.trim();
+            const email = $('email').value.trim();
+            const password = $('password').value;
+            const confirm = $('confirmPassword').value;
+
+            ['nameError','emailError','passwordError','confirmError']
+                .forEach(id => $(id).innerText = '');
+
+            let valid = true;
+
+            if (name.length < 2) {
+                $('nameError').innerText = 'Please enter your full name.';
+                valid = false;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                $('emailError').innerText = 'Please enter a valid email.';
+                valid = false;
+            }
+
+            if (password.length < 6) {
+                $('passwordError').innerText = 'Password must contain at least 6 characters.';
+                valid = false;
+            }
+
+            if (password !== confirm) {
+                $('confirmError').innerText = 'Passwords do not match.';
+                valid = false;
+            }
+
+            if (!valid) return;
+
+            const r = await api('register', 'POST', { name, email, password });
+
+            alert(r.message || 'Registration completed.');
+
+            if (r.success) {
+                this.reset();
+                $('loginEmail').value = email;
+                $('loginPassword').focus();
+            }
         });
 
-        $('loginForm').addEventListener('submit', async function(event) {
+        $('loginForm').addEventListener('submit', async function (event) {
             event.preventDefault();
-            const email=$('loginEmail').value.trim(), password=$('loginPassword').value;
-            ['loginEmailError','loginPasswordError'].forEach(id=>$(id).innerText='');
-            if(!email || password.length<6){ $('loginPasswordError').innerText='Enter a valid email and password.'; return; }
-            const r=await api('login','POST',{email,password});
-            if(!r.success){ alert(r.message); return; }
-            currentUser=r.data;
-            alert('Welcome, '+currentUser.name+'!');
-            this.reset(); updateUI();
-            if(currentUser.role==='admin') $('adminPanel').scrollIntoView({behavior:'smooth'}); else $('dashboard').scrollIntoView({behavior:'smooth'});
+
+            const email = $('loginEmail').value.trim();
+            const password = $('loginPassword').value;
+
+            ['loginEmailError','loginPasswordError']
+                .forEach(id => $(id).innerText = '');
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                $('loginEmailError').innerText = 'Enter a valid email address.';
+                return;
+            }
+
+            if (password.length < 6) {
+                $('loginPasswordError').innerText = 'Password must contain at least 6 characters.';
+                return;
+            }
+
+            const r = await api('login', 'POST', { email, password });
+
+            if (!r.success) {
+                alert(r.message || 'Login failed.');
+                return;
+            }
+
+            currentUser = r.data;
+            this.reset();
+            updateUI();
+
+            alert('Welcome, ' + currentUser.name + '!');
+
+            if (currentUser.role === 'admin') {
+                $('adminPanel').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                $('dashboard').scrollIntoView({ behavior: 'smooth' });
+            }
         });
 
         async function logout() {
-            await api('logout','POST'); currentUser=null; updateUI(); alert('You have been logged out.');
+            const r = await api('logout', 'POST');
+
+            if (!r.success) {
+                alert(r.message || 'Logout failed.');
+                return;
+            }
+
+            currentUser = null;
+            updateUI();
+            alert('You have been logged out.');
         }
 
         async function confirmBooking() {
-            if(!currentUser){ alert('Please login before booking tickets.'); $('login').scrollIntoView({behavior:'smooth'}); return; }
-            if(!selectedMovie){ alert('Please select a movie first.'); return; }
-            const date=$('showDate').value, time=$('showTime').value;
-            $('dateError').innerText=''; $('timeError').innerText='';
-            if(!date){$('dateError').innerText='Please select a date.';return;}
-            if(!time){$('timeError').innerText='Please select a showtime.';return;}
-            if(!selectedSeats.length){alert('Please select at least one seat.');return;}
-            const r=await api('booking_add','POST',{movie_id:selectedMovie.id,date,time,seats:selectedSeats.join(', ')});
-            alert(r.message);
-            if(r.success){ selectedSeats=[]; buildSeats(); updateBookingSummary(); loadBookings(); }
-        }
+            if (!currentUser) {
+                alert('Please login before booking tickets.');
+                $('login').scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
 
-        function populateMovieSelect() {
-            const select=$('adminMovieTable');
-            if(select) renderAdminMovies();
+            if (!selectedMovie) {
+                alert('Please select a movie first.');
+                return;
+            }
+
+            const date = $('showDate').value;
+            const time = $('showTime').value;
+
+            $('dateError').innerText = '';
+            $('timeError').innerText = '';
+
+            if (!date) {
+                $('dateError').innerText = 'Please select a date.';
+                return;
+            }
+
+            if (date < new Date().toISOString().slice(0, 10)) {
+                $('dateError').innerText = 'Please select today or a future date.';
+                return;
+            }
+
+            if (!time) {
+                $('timeError').innerText = 'Please select a showtime.';
+                return;
+            }
+
+            if (!selectedSeats.length) {
+                alert('Please select at least one seat.');
+                return;
+            }
+
+            const r = await api('booking_add', 'POST', {
+                movie_id: selectedMovie.id,
+                date,
+                time,
+                seats: selectedSeats.join(', ')
+            });
+
+            alert(r.message || 'Booking completed.');
+
+            if (r.success) {
+                selectedSeats = [];
+                buildSeats();
+                updateBookingSummary();
+                await loadBookings();
+                await loadAdminBookings();
+            }
         }
 
         function renderAdminMovies() {
-            const tbody=$('adminMovieTable'); if(!tbody)return;
-            tbody.innerHTML='';
-            movies.forEach(m=>{
-                tbody.innerHTML += `<tr><td>${m.id}</td><td>${esc(m.title)}</td><td>${esc(m.genre)}</td><td>${esc(m.language)}</td><td>${m.duration} min</td><td>₹${Number(m.price).toFixed(2)}</td><td><button class="crud-btn crud-edit" onclick="editMovie(${m.id})">Edit</button> <button class="crud-btn crud-delete" onclick="deleteMovie(${m.id})">Remove</button></td></tr>`;
+            const tbody = $('adminMovieTable');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (!movies.length) {
+                tbody.innerHTML =
+                    '<tr><td colspan="7" style="text-align:center;color:#b8b8c7">No movies available.</td></tr>';
+                return;
+            }
+
+            movies.forEach(m => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${Number(m.id)}</td>
+                        <td>${esc(m.title)}</td>
+                        <td>${esc(m.genre)}</td>
+                        <td>${esc(m.language)}</td>
+                        <td>${Number(m.duration)} min</td>
+                        <td>₹${Number(m.price).toFixed(2)}</td>
+                        <td>
+                            <button class="crud-btn crud-edit" onclick="editMovie(${Number(m.id)})">Edit</button>
+                            <button class="crud-btn crud-delete" onclick="deleteMovie(${Number(m.id)})">Remove</button>
+                        </td>
+                    </tr>`;
             });
         }
 
         function editMovie(id) {
-            const m=movies.find(x=>Number(x.id)===Number(id)); if(!m)return;
-            $('movieId').value=m.id; $('movieTitle').value=m.title; $('movieGenre').value=m.genre; $('movieLanguage').value=m.language;
-            $('movieDuration').value=m.duration; $('moviePrice').value=m.price; $('movieRating').value=m.rating||''; $('moviePoster').value=m.poster||'';
-            $('movieSubmit').innerText='Update Movie'; $('adminPanel').scrollIntoView({behavior:'smooth'});
-        }
-        function clearMovieForm(){ $('movieForm').reset(); $('movieId').value=''; $('movieSubmit').innerText='Add Movie'; }
+            const m = movies.find(x => Number(x.id) === Number(id));
+            if (!m) return;
 
-        $('movieForm').addEventListener('submit', async function(e){
+            $('movieId').value = m.id;
+            $('movieTitle').value = m.title;
+            $('movieGenre').value = m.genre;
+            $('movieLanguage').value = m.language;
+            $('movieDuration').value = m.duration;
+            $('moviePrice').value = m.price;
+            $('movieRating').value = m.rating || '';
+            $('moviePoster').value = m.poster || '';
+
+            $('movieSubmit').innerText = 'Update Movie';
+            $('adminPanel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearMovieForm() {
+            $('movieForm').reset();
+            $('movieId').value = '';
+            $('movieSubmit').innerText = 'Add Movie';
+        }
+
+        $('movieForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            if(!currentUser || currentUser.role!=='admin'){alert('Admin access required.');return;}
-            const id=$('movieId').value;
-            const data={id,title:$('movieTitle').value.trim(),genre:$('movieGenre').value.trim(),language:$('movieLanguage').value.trim(),duration:Number($('movieDuration').value),price:Number($('moviePrice').value),rating:Number($('movieRating').value||0),poster:$('moviePoster').value.trim()};
-            const r=await api(id?'movie_update':'movie_add','POST',data); alert(r.message);
-            if(r.success){clearMovieForm();await loadMovies();}
+
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('Admin access required.');
+                return;
+            }
+
+            const id = $('movieId').value;
+
+            const data = {
+                id,
+                title: $('movieTitle').value.trim(),
+                genre: $('movieGenre').value.trim(),
+                language: $('movieLanguage').value.trim(),
+                duration: Number($('movieDuration').value),
+                price: Number($('moviePrice').value),
+                rating: Number($('movieRating').value || 0),
+                poster: $('moviePoster').value.trim()
+            };
+
+            const r = await api(id ? 'movie_update' : 'movie_add', 'POST', data);
+
+            alert(r.message || 'Operation completed.');
+
+            if (r.success) {
+                clearMovieForm();
+                await loadMovies();
+            }
         });
 
-        async function deleteMovie(id){
-            if(!confirm('Remove this movie from the website?'))return;
-            const r=await api('movie_delete','POST',{id}); alert(r.message); if(r.success) await loadMovies();
+        async function deleteMovie(id) {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('Admin access required.');
+                return;
+            }
+
+            if (!confirm('Remove this movie from the website?')) return;
+
+            const r = await api('movie_delete', 'POST', { id });
+
+            alert(r.message || 'Operation completed.');
+
+            if (r.success) {
+                await loadMovies();
+            }
         }
 
-        async function loadBookings(){
-            const r=await api('bookings'); if(!r.success)return;
-            const list=r.data||[];
-            $('totalBookings').innerText=list.length;
-            const today=new Date().toISOString().slice(0,10);
-            $('upcomingBookings').innerText=list.filter(b=>b.date>=today && b.status!=='Cancelled').length;
-            const tbody=$('myBookingsTable'); tbody.innerHTML='';
-            if(!list.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#b8b8c7">No bookings yet. Book your first movie!</td></tr>';return;}
-            list.forEach(b=>{
-                tbody.innerHTML += `<tr><td>#${b.id}</td><td>${esc(b.movie)}</td><td>${esc(b.date)}</td><td>${esc(b.seats)}</td><td><button class="crud-btn crud-edit" onclick="editBooking(${b.id})">Edit</button> <button class="crud-btn crud-delete" onclick="deleteBooking(${b.id})">Cancel</button></td></tr>`;
+        async function loadBookings() {
+            if (!currentUser) return;
+
+            const r = await api('bookings');
+
+            if (!r.success) {
+                $('totalBookings').innerText = '0';
+                $('upcomingBookings').innerText = '0';
+                return;
+            }
+
+            const list = r.data || [];
+
+            $('totalBookings').innerText = list.length;
+
+            const today = new Date().toISOString().slice(0, 10);
+            $('upcomingBookings').innerText =
+                list.filter(b => b.date >= today && b.status !== 'Cancelled').length;
+
+            const tbody = $('myBookingsTable');
+            tbody.innerHTML = '';
+
+            if (!list.length) {
+                tbody.innerHTML =
+                    '<tr><td colspan="5" style="text-align:center;color:#b8b8c7">No bookings yet. Book your first movie!</td></tr>';
+                return;
+            }
+
+            list.forEach(b => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${Number(b.id)}</td>
+                        <td>${esc(b.movie)}</td>
+                        <td>${esc(b.date)}<br><small>${esc(b.time)}</small></td>
+                        <td>${esc(b.seats)}</td>
+                        <td>
+                            <span class="status">${esc(b.status)}</span><br>
+                            <button class="crud-btn crud-edit" onclick="editBooking(${Number(b.id)})">Edit</button>
+                            <button class="crud-btn crud-delete" onclick="deleteBooking(${Number(b.id)})">Cancel</button>
+                        </td>
+                    </tr>`;
             });
         }
 
-        async function loadAdminBookings(){
-            const r=await api('bookings'); if(!r.success)return;
-            const tbody=$('adminBookingTable'); tbody.innerHTML='';
-            (r.data||[]).forEach(b=>{
-                tbody.innerHTML += `<tr><td>#${b.id}</td><td>${esc(b.customer)}</td><td>${esc(b.movie)}</td><td>${esc(b.date)}</td><td>${esc(b.time)}</td><td>${esc(b.seats)}</td><td>₹${Number(b.total).toFixed(2)}</td><td>${esc(b.status)}</td></tr>`;
+        async function loadAdminBookings() {
+            if (!currentUser || currentUser.role !== 'admin') return;
+
+            const r = await api('bookings');
+            if (!r.success) return;
+
+            const tbody = $('adminBookingTable');
+            tbody.innerHTML = '';
+
+            const list = r.data || [];
+
+            list.forEach(b => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${Number(b.id)}</td>
+                        <td>${esc(b.customer)}</td>
+                        <td>${esc(b.movie)}</td>
+                        <td>${esc(b.date)}</td>
+                        <td>${esc(b.time)}</td>
+                        <td>${esc(b.seats)}</td>
+                        <td>₹${Number(b.total).toFixed(2)}</td>
+                        <td>${esc(b.status)}</td>
+                    </tr>`;
             });
-            if(!(r.data||[]).length)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:#b8b8c7">No bookings yet.</td></tr>';
+
+            if (!list.length) {
+                tbody.innerHTML =
+                    '<tr><td colspan="8" style="text-align:center;color:#b8b8c7">No bookings yet.</td></tr>';
+            }
         }
 
-        async function editBooking(id){
-            const r=await api('bookings'); if(!r.success)return;
-            const b=(r.data||[]).find(x=>Number(x.id)===Number(id)); if(!b)return;
-            selectedMovie=movies.find(m=>Number(m.id)===Number(b.movie_id));
-            $('showDate').value=b.date; $('showTime').value=b.time; $('summaryMovie').innerText=b.movie; $('pricePerSeat').innerText='₹'+Number(selectedMovie?.price||0).toFixed(2);
-            selectedSeats=b.seats.split(',').map(x=>x.trim()).filter(Boolean);
-            buildSeats(); selectedSeats.forEach(s=>{const el=document.querySelector(`[data-seat="${s}"]`); if(el && !el.disabled)el.classList.add('selected');}); updateBookingSummary();
-            $('booking').scrollIntoView({behavior:'smooth'});
-            const btn=$('bookingUpdateBtn'); btn.style.display='inline-block'; btn.dataset.id=id;
+        async function editBooking(id) {
+            if (!currentUser) {
+                alert('Please login first.');
+                return;
+            }
+
+            const r = await api('bookings');
+            if (!r.success) {
+                alert(r.message || 'Unable to load booking.');
+                return;
+            }
+
+            const b = (r.data || []).find(x => Number(x.id) === Number(id));
+            if (!b) {
+                alert('Booking not found.');
+                return;
+            }
+
+            selectedMovie = movies.find(m => Number(m.id) === Number(b.movie_id));
+
+            if (!selectedMovie) {
+                alert('The movie for this booking is no longer available.');
+                return;
+            }
+
+            $('bookingTitle').innerText = 'Edit Booking - ' + selectedMovie.title;
+            $('showDate').value = b.date;
+            $('showTime').value = b.time;
+            $('summaryMovie').innerText = selectedMovie.title;
+            $('pricePerSeat').innerText = '₹' + Number(selectedMovie.price).toFixed(2);
+
+            selectedSeats = b.seats
+                .split(',')
+                .map(x => x.trim())
+                .filter(Boolean);
+
+            buildSeats();
+
+            selectedSeats.forEach(s => {
+                const el = document.querySelector(`[data-seat="${s}"]`);
+                if (el && !el.disabled) el.classList.add('selected');
+            });
+
+            updateBookingSummary();
+
+            $('booking').scrollIntoView({ behavior: 'smooth' });
+
+            const btn = $('bookingUpdateBtn');
+            btn.style.display = 'inline-flex';
+            btn.dataset.id = id;
         }
 
-        async function updateExistingBooking(){
-            const id=$('bookingUpdateBtn').dataset.id; if(!id || !selectedMovie)return;
-            const r=await api('booking_update','POST',{id,movie_id:selectedMovie.id,date:$('showDate').value,time:$('showTime').value,seats:selectedSeats.join(', ')});
-            alert(r.message); if(r.success){$('bookingUpdateBtn').style.display='none';loadBookings();}
+        async function updateExistingBooking() {
+            const id = $('bookingUpdateBtn').dataset.id;
+
+            if (!id || !selectedMovie) {
+                alert('Please select a booking to update.');
+                return;
+            }
+
+            if (!selectedSeats.length) {
+                alert('Please select at least one seat.');
+                return;
+            }
+
+            const date = $('showDate').value;
+            const time = $('showTime').value;
+
+            if (!date || !time) {
+                alert('Please select date and showtime.');
+                return;
+            }
+
+            const r = await api('booking_update', 'POST', {
+                id,
+                movie_id: selectedMovie.id,
+                date,
+                time,
+                seats: selectedSeats.join(', ')
+            });
+
+            alert(r.message || 'Booking updated.');
+
+            if (r.success) {
+                $('bookingUpdateBtn').style.display = 'none';
+                await loadBookings();
+                await loadAdminBookings();
+            }
         }
 
-        async function deleteBooking(id){
-            if(!confirm('Cancel this booking?'))return;
-            const r=await api('booking_delete','POST',{id}); alert(r.message); if(r.success){loadBookings();loadAdminBookings();}
+        async function deleteBooking(id) {
+            if (!currentUser) {
+                alert('Please login first.');
+                return;
+            }
+
+            if (!confirm('Cancel this booking?')) return;
+
+            const r = await api('booking_delete', 'POST', { id });
+
+            alert(r.message || 'Booking updated.');
+
+            if (r.success) {
+                await loadBookings();
+                await loadAdminBookings();
+            }
         }
 
-        // Add a second button beside Confirm Booking for editing an existing booking.
-        const confirmButton=document.querySelector('#booking .booking-box .full-btn');
-        if(confirmButton){
-            confirmButton.insertAdjacentHTML('afterend','<button id="bookingUpdateBtn" class="btn outline-btn full-btn" style="display:none;margin-top:10px" type="button" onclick="updateExistingBooking()">Save Changes</button>');
+        // Prevent selecting a past booking date.
+        $('showDate').min = new Date().toISOString().slice(0, 10);
+
+        // Add the booking update button beside Confirm Booking.
+        const confirmButton = document.querySelector('#booking .booking-box .full-btn');
+
+        if (confirmButton) {
+            confirmButton.insertAdjacentHTML(
+                'afterend',
+                '<button id="bookingUpdateBtn" class="btn outline-btn full-btn" style="display:none;margin-top:10px" type="button" onclick="updateExistingBooking()">Save Changes</button>'
+            );
         }
 
         buildSeats();
-        loadMovies().then(checkSession);
+
+        // Load public data first, then restore the server-side session.
+        (async function init() {
+            await loadMovies();
+            await checkSession();
+        })();
     </script>
 </body>
 
